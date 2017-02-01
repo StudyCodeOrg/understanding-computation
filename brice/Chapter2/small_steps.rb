@@ -120,8 +120,8 @@ class Boolean <Struct.new(:value)
 end
 
 
-TRUE = Boolean.new(true)
-FALSE = Boolean.new(false)
+T = Boolean.new(true)
+F = Boolean.new(false)
 
 class LessThan <Struct.new(:left, :right)
   include Reducible
@@ -142,7 +142,7 @@ class LessThan <Struct.new(:left, :right)
 end
 
 context "Booleans" do
-  asserts("cannot be reduced"){not FALSE.reducible?}
+  asserts("cannot be reduced"){not F.reducible?}
 end
 
 context "LessThan" do
@@ -150,11 +150,11 @@ context "LessThan" do
 
   asserts("LessThan.new(Number.new(1), Number.new(9))"){
     LessThan.new(Number.new(1), Number.new(9)).reduce(nil)
-  }.equals(TRUE)
+  }.equals(T)
 
   asserts("LessThan.new(Number.new(9), Number.new(1))"){
     LessThan.new(Number.new(9), Number.new(1)).reduce(nil)
-  }.equals(FALSE)
+  }.equals(F)
 end
 
 class Variable < Struct.new(:name)
@@ -288,9 +288,9 @@ class If < Struct.new(:condition, :consequence, :alternative)
       [If.new(condition.reduce(env), consequence, alternative), env]
     else
       case condition
-      when TRUE
+      when T
         [consequence,env]
-      when FALSE
+      when F
         [alternative,env]
       end
     end
@@ -306,14 +306,14 @@ context "An If statement" do
   asserts("will reduce to the consequence if the the condition is true"){
     consequence = Object.new
     alternative = Object.new
-    statement, _ = If.new(TRUE, consequence, alternative).reduce(nil)
+    statement, _ = If.new(T, consequence, alternative).reduce(nil)
     statement.equal?(consequence)
   }
 
   asserts("will reduce to the alternative if the the condition is false"){
     consequence = Object.new
     alternative = Object.new
-    statement, _ = If.new(FALSE, consequence, alternative).reduce(nil)
+    statement, _ = If.new(F, consequence, alternative).reduce(nil)
     statement.equal?(alternative)
   }
 
@@ -331,14 +331,84 @@ context "An If statement" do
 
   asserts("plays well with the StatementMachine"){
     condition = LessThan.new(Number.new(1), Number.new(3))
-    consequence = Assign.new(:x, TRUE)
-    alternative = Assign.new(:x, FALSE)
+    consequence = Assign.new(:x, T)
+    alternative = Assign.new(:x, F)
     statement = If.new(condition, consequence, alternative)
     start_env = {}
     machine = StatementMachine.new(statement, start_env)
 
-    end_statement, end_env = machine.run
+    final_statement, final_env = machine.run
 
-    (end_env == {x: TRUE}) && (end_statement == Noop.new)
+    (final_env == {x: T}) && (final_statement == Noop.new)
   }
+end
+
+class Sequence
+  include Reducible
+  include Inspectable
+  def initialize(*statements)
+    @statements = statements
+  end
+  def to_s
+    @statements.join "; "
+  end
+  def reduce(env)
+    head = @statements.first
+    return [Noop.new, env] if head.nil?
+
+    tail = @statements.drop(1)
+    if head.reducible?
+      s, new_env = head.reduce(env)
+      [Sequence.new(*[s].concat(tail)), new_env]
+    elsif tail.size > 0
+        [Sequence.new(*tail), env]
+    else
+      [head, env]
+    end
+  end
+end
+
+context "A Sequence" do
+  asserts("will return a noop when empty"){
+    s,e = Sequence.new().reduce({})
+    (s==Noop.new) && (e == {})
+  }
+
+  asserts("will return a single irreducible statement as is"){
+    statement = KIrreducible.new
+    s,e = Sequence.new(statement).reduce({})
+    s == statement
+  }
+
+  asserts("will return the last irreducible statement in a sequence"){
+    s1 = KIrreducible.new
+    s2 = KIrreducible.new
+    s3 = KIrreducible.new
+    s = Sequence.new(s1,s2,s3)
+
+    while s.instance_of?(Sequence)
+      s,e = s.reduce({})
+    end
+
+    s == s3
+  }
+
+  asserts("plays well with the StatementMachine"){
+    statement = Sequence.new(
+      Assign.new(:x, Number.new(1)),
+      Assign.new(:y, Number.new(4)),
+      If.new(
+        LessThan.new(Variable.new(:y), Variable.new(:x)),
+        Assign.new(:z, Add.new(Variable.new(:y), Variable.new(:x))),
+        Assign.new(:z, Multiply.new(Variable.new(:y), Variable.new(:x))),
+      )
+    )
+    machine = StatementMachine.new(statement, {})
+    final_statement, final_environment = machine.run
+    final_environment
+  }.equals({
+    x: Number.new(1),
+    y: Number.new(4),
+    z: Number.new(4)
+  })
 end
