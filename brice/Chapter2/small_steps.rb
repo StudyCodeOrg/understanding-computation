@@ -68,7 +68,7 @@ class Multiply < Struct.new(:left, :right)
   end
 end
 
-context "SIMPLE expressions" do
+context "Expressions" do
     asserts("Add is reducible"){Add.new(nil,nil).reducible?}
     asserts("Number is irreducible"){not Number.new(nil).reducible?}
     asserts("Multiply is reducible"){Multiply.new(nil,nil).reducible?}
@@ -107,7 +107,7 @@ expression = Add.new(
 machine = Machine.new(expression)
 result = machine.run
 
-context "SIMPLE simple steps Machine" do
+context "Simple Machine" do
   asserts("Running the machine on #{expression}"){result}.equals(Number.new(75))
 end
 
@@ -118,6 +118,10 @@ class Boolean <Struct.new(:value)
     value.to_s
   end
 end
+
+
+TRUE = Boolean.new(true)
+FALSE = Boolean.new(false)
 
 class LessThan <Struct.new(:left, :right)
   include Reducible
@@ -138,19 +142,19 @@ class LessThan <Struct.new(:left, :right)
 end
 
 context "Booleans" do
-  asserts("cannot be reduced"){not Boolean.new(false).reducible?}
+  asserts("cannot be reduced"){not FALSE.reducible?}
 end
 
 context "LessThan" do
   asserts("is reducible"){LessThan.new(nil,nil).reducible?}
 
-  asserts("will reduce down to true if appropriate"){
+  asserts("LessThan.new(Number.new(1), Number.new(9))"){
     LessThan.new(Number.new(1), Number.new(9)).reduce(nil)
-  }.equals(Boolean.new(true))
+  }.equals(TRUE)
 
-  asserts("will reduce down to false if appropriate"){
+  asserts("LessThan.new(Number.new(9), Number.new(1))"){
     LessThan.new(Number.new(9), Number.new(1)).reduce(nil)
-  }.equals(Boolean.new(false))
+  }.equals(FALSE)
 end
 
 class Variable < Struct.new(:name)
@@ -207,5 +211,134 @@ context "A VariableMachine" do
     machine = VariableMachine.new(expression, environment)
     results = machine.run
     results == Number.new(15)
+  }
+end
+
+class Noop
+  include Irreducible
+  include Inspectable
+  def to_s
+    "Noop"
+  end
+  def ==(other)
+    other.instance_of?(Noop)
+  end
+end
+
+class Assign < Struct.new(:name, :expression)
+  include Reducible
+  include Inspectable
+  def to_s
+    "#{name} = #{expression}"
+  end
+
+  def reduce(environment)
+    if expression.reducible?
+      [Assign.new(name, expression.reduce(environment)), environment]
+    else
+      [Noop.new, environment.merge({name=>expression})]
+    end
+  end
+end
+
+class StatementMachine < Struct.new(:statement, :environment)
+  def step
+    self.statement, self.environment = statement.reduce(environment)
+  end
+  def show
+    puts "#{statement}, #{environment}"
+  end
+  def run (display=false)
+    while statement.reducible?
+      if display; show end
+      step
+    end
+    if display; show end
+    [statement, environment]
+  end
+end
+
+context "A StatementMachine" do
+  asserts("will ignore a noop"){
+    statement = Noop.new
+    start_environment = {x: Number.new(9)}
+    result_statement, result_env = StatementMachine.new(statement, start_environment).run
+    (result_statement == Noop.new) && (result_env == start_environment)
+  }
+end
+
+context "An Assigment" do
+  asserts("will change the environment and reduce to a noop"){
+    statement = Assign.new(:x, Number.new(9))
+    start_environment = {}
+    result_statement, result_env = StatementMachine.new(statement, start_environment).run
+    (result_statement == Noop.new) && (result_env == {x: Number.new(9)})
+  }
+end
+
+
+class If < Struct.new(:condition, :consequence, :alternative)
+  include Reducible
+  include Inspectable
+  def to_s
+    "if (#{condition}){ #{consequence} } else { #{alternative} }"
+  end
+  def reduce(env)
+    if condition.reducible?
+      [If.new(condition.reduce(env), consequence, alternative), env]
+    else
+      case condition
+      when TRUE
+        [consequence,env]
+      when FALSE
+        [alternative,env]
+      end
+    end
+  end
+end
+
+class KIrreducible
+  include Irreducible
+end
+
+
+context "An If statement" do
+  asserts("will reduce to the consequence if the the condition is true"){
+    consequence = Object.new
+    alternative = Object.new
+    statement, _ = If.new(TRUE, consequence, alternative).reduce(nil)
+    statement.equal?(consequence)
+  }
+
+  asserts("will reduce to the alternative if the the condition is false"){
+    consequence = Object.new
+    alternative = Object.new
+    statement, _ = If.new(FALSE, consequence, alternative).reduce(nil)
+    statement.equal?(alternative)
+  }
+
+  asserts("will reduce the condition if needed"){
+    condition = LessThan.new(Number.new(1), Number.new(3))
+    consequence = KIrreducible.new
+    alternative = KIrreducible.new
+    if_statement = If.new(condition, consequence, alternative)
+    while if_statement.reducible?
+      if_statement, _ = if_statement.reduce(nil)
+    end
+
+    if_statement.equal?(consequence)
+  }
+
+  asserts("plays well with the StatementMachine"){
+    condition = LessThan.new(Number.new(1), Number.new(3))
+    consequence = Assign.new(:x, TRUE)
+    alternative = Assign.new(:x, FALSE)
+    statement = If.new(condition, consequence, alternative)
+    start_env = {}
+    machine = StatementMachine.new(statement, start_env)
+
+    end_statement, end_env = machine.run
+
+    (end_env == {x: TRUE}) && (end_statement == Noop.new)
   }
 end
