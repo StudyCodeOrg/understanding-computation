@@ -2,6 +2,8 @@
 
 ## Syntax gotchas
 
+### Methods vs functions
+
 Note that the following
 
     def a(x)
@@ -9,6 +11,17 @@ Note that the following
     end
 
 Is not a function! It's actually a **method** on the top level `Object`.
+
+It can be converted to a similar object to a proc or a lambda by wrapping around a `Method` object:
+
+    a = method(:a)
+
+### Lambdas don't take Blocks
+
+For example, this code won't work:
+
+    a = -> { puts yield(2)}
+    a {|n| n-1} #=> NoMethodError: undefined method `a' for main:Object
 
 ## Procs, Lambdas and Blocks
 
