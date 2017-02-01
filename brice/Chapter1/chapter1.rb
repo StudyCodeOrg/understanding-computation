@@ -38,3 +38,17 @@ end
 context "Square block" do
   asserts("when called with #{TEST_ARRAY}") { map_block {|x| x*x}}.equals([1,4,9,16,25,36])
 end
+
+#Enumerable FizzBuzz example
+answer = (1..30).map do |n|
+  if n%15 == 0
+    "FizzBuzz"
+  elsif n%3 == 0
+    "Fizz"
+  elsif n%5 ==0
+    "Buzz"
+  else
+    n
+  end
+end
+puts answer
