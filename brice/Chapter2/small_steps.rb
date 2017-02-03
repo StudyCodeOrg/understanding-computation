@@ -412,3 +412,49 @@ context "A Sequence" do
     z: Number.new(4)
   })
 end
+
+class While < Struct.new(:condition, :body)
+  include Reducible
+  include Inspectable
+  def to_s
+    "while ( #{condition} ) { #{body} }"
+  end
+
+  def reduce(env)
+    [If.new(condition, Sequence.new(body,self), Noop.new), env]
+  end
+end
+
+context "A While loop" do
+  asserts("with a false condition will skip the while body"){
+    program = While.new(F, Assign.new(:x, T))
+    machine = StatementMachine.new(program, {})
+
+    final_statement, final_env = machine.run
+
+    final_env == {}
+  }
+
+  asserts("with a true condition will execute the while body"){
+    program = While.new(Variable.new(:x), Assign.new(:x, F))
+    machine = StatementMachine.new(program, {x: T})
+
+    final_statement, final_env = machine.run
+
+    final_env == {x: F}
+  }
+
+  asserts("can be used to do something N times"){
+    program = Sequence.new(
+      Assign.new(:N, Number.new(0)),
+      While.new(
+        LessThan.new(Variable.new(:N), Number.new(10)),
+        Assign.new(:N, Add.new(Variable.new(:N), Number.new(1)))))
+    start_env = {}
+    machine = StatementMachine.new(program, start_env)
+
+    final_statement, final_environment = machine.run()
+
+    final_environment == { N: Number.new(10) }
+  }
+end
