@@ -1,43 +1,10 @@
 require "rubygems"
 require "bundler/setup"
 require "riot"
+require_relative "./base.rb"
 
 
-module Inspectable
-  def inspect
-    "«#{self}»"
-  end
-end
-
-module Reducible
-  def reducible?
-    true
-  end
-end
-
-module Irreducible
-  def reducible?
-    false
-  end
-end
-
-class Number < Struct.new(:value)
-  include Inspectable
-  include Irreducible
-  def to_s
-    value.to_s
-  end
-end
-
-
-class Add < Struct.new(:left, :right)
-  include Inspectable
-  include Reducible
-
-  def to_s
-    "#{left} + #{right}"
-  end
-
+class Add
   def reduce(env)
     if left.reducible?
       Add.new(left.reduce(env), right)
@@ -49,14 +16,7 @@ class Add < Struct.new(:left, :right)
   end
 end
 
-class Multiply < Struct.new(:left, :right)
-  include Inspectable
-  include Reducible
-
-  def to_s
-    "#{left} * #{right}"
-  end
-
+class Multiply
   def reduce(env)
     if left.reducible?
       Multiply.new(left.reduce(env), right)
@@ -111,25 +71,9 @@ context "Simple Machine" do
   asserts("Running the machine on #{expression}"){result}.equals(Number.new(75))
 end
 
-class Boolean <Struct.new(:value)
-  include Irreducible
-  include Inspectable
-  def to_s
-    value.to_s
-  end
-end
 
 
-T = Boolean.new(true)
-F = Boolean.new(false)
-
-class LessThan <Struct.new(:left, :right)
-  include Reducible
-  include Inspectable
-  def to_s
-    "#{left} < #{right}"
-  end
-
+class LessThan
   def reduce(env)
     if left.reducible?
       LessThan.new(left.reduce(env), right)
@@ -157,12 +101,7 @@ context "LessThan" do
   }.equals(F)
 end
 
-class Variable < Struct.new(:name)
-  include Inspectable
-  include Reducible
-  def to_s
-    name.to_s
-  end
+class Variable
   def reduce(env)
     env[name]
   end
@@ -214,24 +153,7 @@ context "A VariableMachine" do
   }
 end
 
-class Noop
-  include Irreducible
-  include Inspectable
-  def to_s
-    "Noop"
-  end
-  def ==(other)
-    other.instance_of?(Noop)
-  end
-end
-
-class Assign < Struct.new(:name, :expression)
-  include Reducible
-  include Inspectable
-  def to_s
-    "#{name} = #{expression}"
-  end
-
+class Assign
   def reduce(environment)
     if expression.reducible?
       [Assign.new(name, expression.reduce(environment)), environment]
@@ -277,12 +199,7 @@ context "An Assigment" do
 end
 
 
-class If < Struct.new(:condition, :consequence, :alternative)
-  include Reducible
-  include Inspectable
-  def to_s
-    "if (#{condition}){ #{consequence} } else { #{alternative} }"
-  end
+class If
   def reduce(env)
     if condition.reducible?
       [If.new(condition.reduce(env), consequence, alternative), env]
@@ -344,14 +261,6 @@ context "An If statement" do
 end
 
 class Sequence
-  include Reducible
-  include Inspectable
-  def initialize(*statements)
-    @statements = statements
-  end
-  def to_s
-    @statements.join "; "
-  end
   def reduce(env)
     head = @statements.first
     return [Noop.new, env] if head.nil?
@@ -413,13 +322,7 @@ context "A Sequence" do
   })
 end
 
-class While < Struct.new(:condition, :body)
-  include Reducible
-  include Inspectable
-  def to_s
-    "while ( #{condition} ) { #{body} }"
-  end
-
+class While
   def reduce(env)
     [If.new(condition, Sequence.new(body,self), Noop.new), env]
   end
