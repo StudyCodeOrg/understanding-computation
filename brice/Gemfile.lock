@@ -1,6 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    execjs (2.7.0)
     riot (0.12.7)
       rr
     rr (1.2.0)
@@ -9,6 +10,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  execjs
   riot
 
 BUNDLED WITH
