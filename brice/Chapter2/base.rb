@@ -103,11 +103,16 @@ end
 class Sequence
   include Reducible
   include Inspectable
+  attr_reader :statements
   def initialize(*statements)
     @statements = statements
   end
   def to_s
     "[" + @statements.join("; ") + "]"
+  end
+  def ==(other)
+    other.instance_of?(Sequence)
+    @statements.zip(other.statements).map{|a,b| a == b}
   end
 end
 

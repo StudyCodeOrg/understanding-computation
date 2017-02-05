@@ -40,4 +40,13 @@ context "The Simple Parser" do
   asserts("thinks 'x=1'"){
     parser.parse("x=1").to_ast
   }.equals(Assign.new(:x, Number.new(1)))
+
+  asserts("can parse multiple statements"){
+    program = "x=1; y=2"
+    parser.parse(program).to_ast
+  }.equals(Sequence.new(
+    Assign.new(:x, Number.new(1)),
+    Assign.new(:y, Number.new(2))
+  ))
+
 end

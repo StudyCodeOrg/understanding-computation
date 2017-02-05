@@ -1,15 +1,16 @@
 
 grammar Simple
   rule program
-    (statement / expression)+ #(";" (statement / expression))*
+    first:(statement / expression) rest:(space? (";" / "\n") space? item:(statement / expression))*
     {
       def to_ast
-        if elements.empty?
+        items = [first] + rest.elements.map {|xs| xs.item}
+        if items.empty?
           nil
-        elsif elements.size > 1
-          Sequence.new(*elements.map{|e| e.to_ast})
+        elsif items.size > 1
+          Sequence.new(*items.map{|e| e.to_ast})
         else
-          elements.first.to_ast
+          items.first.to_ast
         end
       end
     }
