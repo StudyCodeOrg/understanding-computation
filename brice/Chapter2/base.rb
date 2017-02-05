@@ -107,7 +107,7 @@ class Sequence
     @statements = statements
   end
   def to_s
-    @statements.join "; "
+    "[" + @statements.join("; ") + "]"
   end
 end
 

@@ -2,9 +2,12 @@ GEM
   remote: https://rubygems.org/
   specs:
     execjs (2.7.0)
+    polyglot (0.3.5)
     riot (0.12.7)
       rr
     rr (1.2.0)
+    treetop (1.6.8)
+      polyglot (~> 0.3)
 
 PLATFORMS
   ruby
@@ -12,6 +15,7 @@ PLATFORMS
 DEPENDENCIES
   execjs
   riot
+  treetop
 
 BUNDLED WITH
    1.14.3
