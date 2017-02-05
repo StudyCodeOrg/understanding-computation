@@ -23,8 +23,16 @@ grammar Simple
     variable / number
   end
 
+  rule space
+    [\s]+
+  end
+
   rule assignment
-    variable "=" expression
+    variable space* "=" space* expression {
+      def to_ast
+        Assign.new(elements.first.text_value.to_sym, elements.last.to_ast)
+      end
+    }
   end
 
   rule variable

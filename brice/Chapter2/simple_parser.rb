@@ -28,4 +28,16 @@ context "The Simple Parser" do
   asserts("thinks '3.14'"){
     parser.parse("3.14").to_ast
   }.equals(Number.new(3.14))
+
+  asserts("thinks 'x = 1'"){
+    parser.parse("x = 1").to_ast
+  }.equals(Assign.new(:x, Number.new(1)))
+
+  asserts("thinks 'x + 1 '"){
+    parser.parse("x = 1").to_ast
+  }.equals(Assign.new(:x, Number.new(1)))
+
+  asserts("thinks 'x=1'"){
+    parser.parse("x=1").to_ast
+  }.equals(Assign.new(:x, Number.new(1)))
 end
