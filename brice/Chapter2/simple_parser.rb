@@ -37,10 +37,6 @@ context "The Simple Parser" do
     parser.parse("x = 1").to_ast
   }.equals(Assign.new(:x, Number.new(1)))
 
-  asserts("thinks 'x + 1 '"){
-    parser.parse("x = 1").to_ast
-  }.equals(Assign.new(:x, Number.new(1)))
-
   asserts("thinks 'x=1'"){
     parser.parse("x=1").to_ast
   }.equals(Assign.new(:x, Number.new(1)))
