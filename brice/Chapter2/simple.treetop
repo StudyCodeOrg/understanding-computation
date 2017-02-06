@@ -21,17 +21,76 @@ grammar Simple
   end
 
   rule expression
-    variable / number
+    comparison / addition / multiplication / number / boolean / variable
+  end
+
+  rule boolean
+    True / False
+  end
+
+  rule True
+    "true"
+    {
+      def to_ast
+        Boolean.new(true)
+      end
+    }
+  end
+
+  rule False
+    "false"
+    {
+      def to_ast
+        Boolean.new(false)
+      end
+    }
+  end
+
+  rule comparator
+    "<"
+    {
+      def to_ast
+        {"<"=>LessThan}[text_value]
+      end
+    }
   end
 
   rule space
     [\s]+
   end
 
-  rule assignment
-    variable space* "=" space* expression {
+  rule comparison
+    a:number space* comparator space* b:number
+    {
       def to_ast
-        Assign.new(elements.first.text_value.to_sym, elements.last.to_ast)
+        comparator.to_ast.new(a.to_ast, b.to_ast)
+      end
+    }
+  end
+
+
+  rule addition
+    a:number space* "+" space* b:number
+    {
+      def to_ast
+        Add.new(a.to_ast, b.to_ast)
+      end
+    }
+  end
+
+  rule multiplication
+    a:number space* "*" space* b:number
+    {
+      def to_ast
+        Multiply.new(a.to_ast, b.to_ast)
+      end
+    }
+  end
+
+  rule assignment
+    name:variable space* "=" space* exp:expression {
+      def to_ast
+        Assign.new(name.text_value.to_sym, exp.to_ast)
       end
     }
   end

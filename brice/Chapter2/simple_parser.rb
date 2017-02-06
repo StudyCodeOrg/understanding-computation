@@ -49,4 +49,37 @@ context "The Simple Parser" do
     Assign.new(:y, Number.new(2))
   ))
 
+  asserts("can parse multiplications"){
+    program = "3 * 3"
+    parser.parse(program).to_ast
+  }.equals(Multiply.new(Number.new(3), Number.new(3)))
+
+  asserts("can parse decimal multiplications"){
+    program = "3.0 * 3.0"
+    parser.parse(program).to_ast
+  }.equals(Multiply.new(Number.new(3.0), Number.new(3.0)))
+
+  asserts("can parse addition"){
+    program = "3 + 3"
+    parser.parse(program).to_ast
+  }.equals(Add.new(Number.new(3), Number.new(3)))
+
+  asserts("can parse decimal addition"){
+    program = "3.0 + 3.0"
+    parser.parse(program).to_ast
+  }.equals(Add.new(Number.new(3.0), Number.new(3.0)))
+
+  asserts("can parse less than"){
+    program = "1 < 3"
+    parser.parse(program).to_ast
+  }.equals(LessThan.new(Number.new(1), Number.new(3)))
+
+  asserts("can parse true"){
+    # puts parser.parse("true").inspect
+    parser.parse("true").to_ast
+  }.equals(T)
+
+  asserts("can parse false"){
+    parser.parse("false").to_ast
+  }.equals(F)
 end
