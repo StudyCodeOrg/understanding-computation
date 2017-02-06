@@ -114,8 +114,7 @@ class Sequence
     "[" + @statements.join("; ") + "]"
   end
   def ==(other)
-    other.instance_of?(Sequence)
-    @statements.zip(other.statements).map{|a,b| a == b}
+    @statements.zip(other.statements).map{|a,b| a == b}.all?
   end
 end
 
