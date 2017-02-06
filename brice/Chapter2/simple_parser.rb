@@ -12,6 +12,10 @@ parser = SimpleParser.new
 
 
 context "The Simple Parser" do
+  asserts("False is false"){
+    Boolean.new(false) == F
+  }
+
   asserts("can recognise a variable"){
     program = "x"
     expect_AST = Variable.new(:x)
