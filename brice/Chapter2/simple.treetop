@@ -1,6 +1,9 @@
 
 grammar Simple
   rule program
+    sequence
+  end
+  rule sequence
     first:(statement / expression) rest:(space? (";" / "\n") space? item:(statement / expression))*
     {
       def to_ast
