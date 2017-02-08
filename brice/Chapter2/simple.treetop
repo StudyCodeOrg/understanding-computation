@@ -3,8 +3,11 @@ grammar Simple
   rule program
     sequence
   end
+
   rule sequence
-    first:(statement / expression) rest:(space? (";" / "\n") space? item:(statement / expression))*
+    space? first:(statement / expression)
+    rest:(space? ";" space? item:(statement / expression))*
+    space? ";"? space?
     {
       def to_ast
         items = [first] + rest.elements.map {|xs| xs.item}
@@ -20,7 +23,32 @@ grammar Simple
   end
 
   rule statement
-    assignment
+    If / While / assignment
+  end
+
+  rule If
+    "if" space? "(" space? condition:expression space? ")" space?
+    "{" space? consequence:sequence space? "}"
+    alternative:(space? "else" space? "{" space? body:sequence space? "}")?
+    {
+      def to_ast
+        if (defined? alternative.body).nil?
+          If.new(condition.to_ast, consequence.to_ast, Noop.new)
+        else
+          If.new(condition.to_ast, consequence.to_ast, alternative.body.to_ast)
+        end
+      end
+    }
+  end
+
+  rule While
+    "while" space? "(" space? condition:expression space? ")" space?
+    "{" space? body:sequence space? "}"
+    {
+      def to_ast
+        While.new(condition.to_ast, body.to_ast)
+      end
+    }
   end
 
   rule expression
@@ -63,7 +91,7 @@ grammar Simple
   end
 
   rule comparison
-    a:number space* comparator space* b:number
+    a:(number / variable) space? comparator space? b:(number / variable)
     {
       def to_ast
         comparator.to_ast.new(a.to_ast, b.to_ast)
@@ -73,7 +101,7 @@ grammar Simple
 
 
   rule addition
-    a:number space* "+" space* b:number
+    a:(number / variable) space? "+" space? b:(number / variable)
     {
       def to_ast
         Add.new(a.to_ast, b.to_ast)
@@ -82,7 +110,7 @@ grammar Simple
   end
 
   rule multiplication
-    a:number space* "*" space* b:number
+    a:(number / variable) space? "*" space? b:(number / variable)
     {
       def to_ast
         Multiply.new(a.to_ast, b.to_ast)
@@ -91,7 +119,7 @@ grammar Simple
   end
 
   rule assignment
-    name:variable space* "=" space* exp:expression {
+    name:variable space? "=" space? exp:expression {
       def to_ast
         Assign.new(name.text_value.to_sym, exp.to_ast)
       end
@@ -107,11 +135,29 @@ grammar Simple
     }
   end
 
+  rule integer
+    [-]? [0-9]+
+    {
+      def to_value
+        text_value.to_i
+      end
+    }
+  end
+
+  rule decimal
+    [-]? [0-9]+ "." [0-9]+
+    {
+      def to_value
+        text_value.to_f
+      end
+    }
+  end
+
   rule number
-    [-]? [0-9]+ ([\.] [0-9]+)?
+    a:(decimal / integer)
     {
       def to_ast
-        Number.new(text_value.to_f)
+        Number.new(a.to_value)
       end
     }
   end

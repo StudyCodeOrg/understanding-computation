@@ -3,6 +3,7 @@ require "bundler/setup"
 require "riot"
 require "treetop"
 require_relative "./base.rb"
+require_relative "./big-step.rb"
 
 
 
@@ -82,4 +83,116 @@ context "The Simple Parser" do
   asserts("can parse false"){
     parser.parse("false").to_ast
   }.equals(F)
+
+  asserts("can parse while statement with single body statement"){
+    program = "while (true){ x = 1; }"
+    expected = While.new(T,
+        Assign.new(:x, Number.new(1))
+      )
+    result = parser.parse(program).to_ast
+    result == expected
+  }
+
+  asserts("can parse while statement with multiple body statement"){
+    program = "while (true){
+      x = 1;
+      y = 2.0;
+    }"
+    expected = While.new(T,
+      Sequence.new(
+        Assign.new(:x, Number.new(1)),
+        Assign.new(:y, Number.new(2.0))
+      ))
+    result = parser.parse(program).to_ast
+    result == expected
+  }
+
+  asserts("can parse if statement with single statement, no alternative"){
+    program = "if (true){
+      x = 1
+    }"
+    expected = If.new(T,
+        Assign.new(:x, Number.new(1)), Noop.new
+      )
+    result = parser.parse(program).to_ast
+    result == expected
+  }
+
+  asserts("can parse if statement with single consequence, single alternative"){
+    program = "if (true){
+      x = 1
+    } else {
+      y = 2
+    }"
+    expected = If.new(T,
+        Assign.new(:x, Number.new(1)),
+        Assign.new(:y, Number.new(2)),
+      )
+    result = parser.parse(program).to_ast
+    result == expected
+  }
+
+  asserts("can parse if statement with multiple consequences, multiple alternatives"){
+    program = "if (true){
+      x = 1;
+      k = 9;
+    } else {
+      y = 2;
+      i = 89;
+    }"
+    expected = If.new(T,
+      Sequence.new(
+        Assign.new(:x, Number.new(1)),
+        Assign.new(:k, Number.new(9))),
+      Sequence.new(
+        Assign.new(:y, Number.new(2)),
+        Assign.new(:i, Number.new(89)))
+      )
+    result = parser.parse(program).to_ast
+    result == expected
+  }
+
+
+  asserts("can parse multiple statements"){
+    program = "
+    x = 1;
+    y = 4;
+    "
+    expected = Sequence.new(
+      Assign.new(:x, Number.new(1)),
+      Assign.new(:y, Number.new(4))
+    )
+    result = parser.parse(program).to_ast
+    result == expected
+  }
+  asserts("can parse a complete program"){
+    program = "
+    x = 1;
+    y = 4;
+    if ( y < x ) {
+      z = y + x;
+    } else {
+      z = y * x;
+    };
+    "
+    expected = Sequence.new(
+      Assign.new(:x, Number.new(1)),
+      Assign.new(:y, Number.new(4)),
+      If.new(
+        LessThan.new(Variable.new(:y), Variable.new(:x)),
+        Assign.new(:z, Add.new(Variable.new(:y), Variable.new(:x))),
+        Assign.new(:z, Multiply.new(Variable.new(:y), Variable.new(:x))),
+      )
+    )
+
+    result = parser.parse(program).to_ast
+    result == expected
+  }
+
+  asserts("can parse the book's test program"){
+    program = "while (x < 5) { x = x * 3 }"
+    abstract_syntax_tree = parser.parse(program).to_ast
+    env = abstract_syntax_tree.evaluate({x: Number.new(1)})
+    env == {x: Number.new(9)}
+  }
 end
