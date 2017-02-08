@@ -49,6 +49,9 @@ class Boolean <Struct.new(:value)
   def to_s
     value.to_s
   end
+  def ==(other)
+    value == other.value
+  end
 end
 
 
@@ -103,11 +106,15 @@ end
 class Sequence
   include Reducible
   include Inspectable
+  attr_reader :statements
   def initialize(*statements)
     @statements = statements
   end
   def to_s
-    @statements.join "; "
+    "[" + @statements.join("; ") + "]"
+  end
+  def ==(other)
+    @statements.zip(other.statements).map{|a,b| a == b}.all?
   end
 end
 
