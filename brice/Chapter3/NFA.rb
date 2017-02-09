@@ -1,7 +1,7 @@
 require "rubygems"
 require "bundler/setup"
 require "riot"
-require_relative "./DFA.rb"
+require_relative "FA"
 
 
 module NFA

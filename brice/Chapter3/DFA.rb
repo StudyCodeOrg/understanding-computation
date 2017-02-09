@@ -1,7 +1,7 @@
 require "rubygems"
 require "bundler/setup"
 require "riot"
-require_relative "./FA.rb"
+require_relative "FA"
 
 module DFA
   class Rulebook < Struct.new(:rules)
