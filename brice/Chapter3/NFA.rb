@@ -45,9 +45,9 @@ module NFA
     end
   end
 
-  class Runner < Struct.new(:start_states, :accept_states, :rulebook)
+  class Runner < Struct.new(:start_state, :accept_states, :rulebook)
     def nfa
-      NFA.new(start_states, accept_states, rulebook)
+      NFA.new(Set[start_state], accept_states, rulebook)
     end
     def accepts?(string)
       self.nfa.read_string(string).accepting?
@@ -95,7 +95,7 @@ module NFA
 
     context "NFA Runner" do
       asserts "will accept a valid string" do
-        Runner.new([1], [4], test_rulebook).accepts?("bbbbbbbb")
+        Runner.new(1, [4], test_rulebook).accepts?("bbbbbbbb")
       end
     end
 
