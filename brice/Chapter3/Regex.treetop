@@ -1,0 +1,61 @@
+grammar Pattern
+  rule choose
+    first:concatenate_or_empty '|' rest:choose {
+      def to_ast
+        Regex::Option.new(first.to_ast, rest.to_ast)
+      end
+    }
+    /
+    concatenate_or_empty
+  end
+
+  rule concatenate_or_empty
+    concatenate / empty
+  end
+
+  rule concatenate
+    first:repeat rest:concatenate {
+      def to_ast
+        Regex::Concatenate.new(first.to_ast, rest.to_ast)
+      end
+    }
+    /
+    repeat
+  end
+
+  rule empty
+    '' {
+      def to_ast
+        Regex::Empty.new
+      end
+    }
+  end
+
+  rule repeat
+    brackets '*' {
+      def to_ast
+        Regex::Repeat.new(brackets.to_ast)
+      end
+    }
+    /
+    brackets
+  end
+
+  rule brackets
+    '(' choose ')' {
+      def to_ast
+        choose.to_ast
+      end
+    }
+    /
+    literal
+  end
+
+  rule literal
+    [a-z] {
+      def to_ast
+        Regex::Literal.new(text_value)
+      end
+    }
+  end
+end
