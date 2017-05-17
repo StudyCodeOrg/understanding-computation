@@ -22,6 +22,9 @@ module NFA
         follow_free_moves(states+more_states)
       end
     end
+    def alphabet
+      Set.new(rules.map(&:character).compact.uniq)
+    end
   end
 
   class NFA < Struct.new(:current_states, :accept_states, :rulebook)
@@ -46,8 +49,8 @@ module NFA
   end
 
   class Runner < Struct.new(:start_state, :accept_states, :rulebook)
-    def nfa
-      NFA.new(Set[start_state], accept_states, rulebook)
+    def nfa(current_states = Set[start_state])
+      NFA.new(current_states, accept_states, rulebook)
     end
     def accepts?(string)
       self.nfa.read_string(string).accepting?
@@ -72,6 +75,9 @@ module NFA
       end
       asserts "will return the correct set of states" do
         test_rulebook.next_states(Set[1],"b") == Set[1,2]
+      end
+      asserts "can give us the possible input alphabet" do
+        test_rulebook.alphabet == Set['a','b']
       end
     end
 

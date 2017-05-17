@@ -105,10 +105,16 @@ module Regex
     end
     def to_nfa_runner
       nfa = pattern.to_nfa_runner
-      rules = nfa.rulebook.rules + nfa.accept_states.map { |s|
-        FA::Rule.new(s, nil, nfa.start_state)
-      }
-      NFA::Runner.new(nfa.start_state, nfa.accept_states, NFA::Rulebook.new(rules))
+      start = Object.new
+      accepts = nfa.accept_states+[start]
+      rules = nfa.rulebook.rules +
+        nfa.accept_states.map { |s|
+          FA::Rule.new(s, nil, nfa.start_state)
+        } +
+        [FA::Rule.new(start, nil, nfa.start_state)]
+
+
+      NFA::Runner.new(start, accepts, NFA::Rulebook.new(rules))
     end
   end
 
@@ -194,6 +200,24 @@ module Regex
         asserts "#{repeat.inspect} will not match 'bb'" do
           not repeat.matches?('bb')
         end
+        asserts "#{repeat.inspect} will match ''" do
+          repeat.matches?('')
+        end
+      end
+
+      context "/a(|b))*/" do
+        pattern = Repeat.new(Concatenate.new(Literal.new("a"), Option.new(Empty.new, Literal.new("b"))))
+        asserts "Constructed pattern prints to expected representation" do
+          "/(a(|b))*/" == pattern.inspect
+        end
+        asserts "#{pattern.inspect} will match ''" do pattern.matches?('') end
+        asserts "#{pattern.inspect} will match 'a'" do pattern.matches?('a') end
+        asserts "#{pattern.inspect} will match 'ab'" do pattern.matches?('ab') end
+        asserts "#{pattern.inspect} will match 'aba'" do pattern.matches?('aba') end
+        asserts "#{pattern.inspect} will match 'abab'" do pattern.matches?('abab') end
+        asserts "#{pattern.inspect} will match 'abaab'" do pattern.matches?('abaab') end
+        asserts "#{pattern.inspect} will not match 'abba'" do not pattern.matches?('abba') end
+
       end
     end
 
