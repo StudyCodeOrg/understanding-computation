@@ -30,16 +30,21 @@ if __FILE__ == $0
   ])
   runner = NFA::Runner.new(1, [3], testbook)
 
+
   context "NFASimulation" do
     asserts "will accept a runner on cosntruction" do
       NFASimulation.new(runner)
     end
-    asserts "will return the correct metatstate when stepped once" do
-      NFASimulation.new(runner).next_state(Set[1,2], 'a') == Set[1,2]
-    end
-
-    asserts "will return the correct metastate when stepped with defined starting states" do
-      NFASimulation.new(runner).next_state(Set[3, 2], 'b') ==Set[1, 3, 2]
+    [
+      [Set[1,2], 'a', Set[1,2]],
+      [Set[1,2], 'b', Set[3,2]],
+      [Set[3,2], 'b', Set[1,2,3]],
+      [Set[1,2,3], 'b', Set[1,2,3]],
+      [Set[1,2,3], 'a', Set[1,2]],
+    ].each do |starting_metastate, input_char, expected_metastate|
+      asserts("With a starting metastate of #{starting_metastate.inspect} and an input of #{input_char}, the next metatstate") {
+        NFASimulation.new(runner).next_state(starting_metastate, input_char)
+      }.equals(expected_metastate)
     end
   end
 end
