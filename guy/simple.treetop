@@ -1,0 +1,178 @@
+
+grammar Simple
+  rule program
+    sequence / statement / expression
+  end
+
+  rule sequence
+    space? first:(statement / expression)
+    rest:(space? ";" space? item:(statement / expression))*
+    space? ";"? space?
+    {
+      def to_ast
+        elements = [first] + rest.elements.map{|x| x.item}
+        if elements.length == 1
+          first.to_ast
+        else
+          asts = elements.map {|e| e.to_ast}
+          Sequence.new(*asts)
+        end
+      end
+    }
+  end
+
+  rule statement
+    If / While / assignment
+  end
+
+  rule If
+    "if" space? "(" space? condition:expression space? ")" space?
+    "{" space? consequence:sequence space? "}"
+    alternative:(space? "else" space? "{" space? body:sequence space? "}")?
+    {
+      def to_ast
+        if defined? alternative.body
+          If.new(
+            condition.to_ast,
+            consequence.to_ast,
+            alternative.body.to_ast
+          )
+        else
+          If.new(
+            condition.to_ast,
+            consequence.to_ast,
+            Noop.new
+          )
+        end
+      end
+    }
+  end
+
+  rule While
+    "while" space? "(" space? condition:expression space? ")" space?
+    "{" space? body:(seq:sequence)? space? "}"
+    {
+      def to_ast
+        if defined? body.seq
+          While.new(condition.to_ast, body.seq.to_ast)
+        else
+          While.new(condition.to_ast, Noop.new)
+        end
+      end
+    }
+  end
+
+  rule expression
+    a:(comparison / addition / multiplication / number / boolean / variable)
+    {
+      def to_ast
+        # puts "(expression)>>#{a.inspect}"
+        a.to_ast
+      end
+    }
+  end
+
+  rule boolean
+    True / False
+  end
+
+  rule True
+    "True"
+    {
+      def to_ast
+        Boolean.new(true)
+      end
+    }
+  end
+
+  rule False
+    "False"
+    {
+      def to_ast
+        Boolean.new(false)
+      end
+    }
+  end
+
+  rule comparator
+    "<"
+  end
+
+  rule space
+    [\s]+
+  end
+
+  rule comparison
+    a:(number / variable) space? comparator space? b:(number / variable)
+    {
+      def to_ast
+        LessThan.new(a.to_ast, b.to_ast)
+      end
+    }
+  end
+
+
+  rule addition
+    a:(number / variable) space? "+" space? b:(expression)
+    {
+      def to_ast
+        # puts "(add)>>#{a}"
+        Add.new(a.to_ast, b.to_ast)
+      end
+    }
+  end
+
+  rule multiplication
+    a:(number / variable) space? "*" space? b:(expression)
+    {
+      def to_ast
+        # puts "(mult)>>#{a}"
+        Multiply.new(a.to_ast, b.to_ast)
+      end
+    }
+  end
+
+  rule assignment
+    name:variable space? "=" space? exp:expression {
+      def to_ast
+        Assign.new(name.to_ast.name, exp.to_ast)
+      end
+    }
+  end
+
+  rule variable
+    [a-zA-Z] [a-zA-Z0-9_]*
+    {
+      def to_ast
+        Variable.new(text_value.to_sym)
+      end
+    }
+  end
+
+  rule integer
+    [-]? [0-9]+
+    {
+      def to_value
+        text_value.to_i
+      end
+    }
+  end
+
+  rule decimal
+    [-]? [0-9]+ "." [0-9]+
+    {
+      def to_value
+        text_value.to_f
+      end
+    }
+  end
+
+  rule number
+    a:(decimal / integer)
+    {
+      def to_ast
+        Number.new(a.to_value)
+      end
+    }
+  end
+end
