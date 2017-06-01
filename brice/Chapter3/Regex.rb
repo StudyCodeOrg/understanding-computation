@@ -34,6 +34,9 @@ module Regex
       accepts = [start]
       NFA::Runner.new(start, accepts, NFA::Rulebook.new([]))
     end
+    def ==(other)
+      other.instance_of? Empty
+    end
   end
 
   class Literal < Struct.new(:char)
@@ -102,97 +105,122 @@ module Regex
     end
     def to_nfa_runner
       nfa = pattern.to_nfa_runner
-      rules = nfa.rulebook.rules + nfa.accept_states.map { |s|
-        FA::Rule.new(s, nil, nfa.start_state)
-      }
-      NFA::Runner.new(nfa.start_state, nfa.accept_states, NFA::Rulebook.new(rules))
+      start = Object.new
+      accepts = nfa.accept_states+[start]
+      rules = nfa.rulebook.rules +
+        nfa.accept_states.map { |s|
+          FA::Rule.new(s, nil, nfa.start_state)
+        } +
+        [FA::Rule.new(start, nil, nfa.start_state)]
+
+
+      NFA::Runner.new(start, accepts, NFA::Rulebook.new(rules))
     end
   end
 
-  context "Patterns" do
-    asserts "can be built manually" do
-      exp = Repeat.new(
-        Option.new(
-          Literal.new("x"),
-          Concatenate.new(Literal.new("x"), Literal.new("y"))
+  if __FILE__ == $0
+    context "Patterns" do
+      asserts "can be built manually" do
+        exp = Repeat.new(
+          Option.new(
+            Literal.new("x"),
+            Concatenate.new(Literal.new("x"), Literal.new("y"))
+          )
         )
-      )
-      exp.inspect == "/(x|xy)*/"
-    end
-
-    context "Empty" do
-      asserts "can be turned into an NFA" do
-        Empty.new.to_nfa_runner.kind_of? NFA::Runner
-      end
-      asserts "Empty's NFA will accept the empty string" do
-        Empty.new.matches?("")
-      end
-    end
-
-    context "Literal" do
-      asserts "can be turned into an NFA" do
-        Literal.new("x").to_nfa_runner.kind_of? NFA::Runner
-      end
-      asserts "Literal's NFA will accept the character it was initialised with" do
-        Literal.new("x").matches?("x")
-      end
-      asserts "Literal's NFA won't accept other characters than the one it was initialised with" do
-        not Literal.new("x").matches?("y")
-      end
-    end
-
-    context "Concatenate" do
-      concat = Concatenate.new(Literal.new("x"), Literal.new("y"))
-      asserts "#{concat.inspect} matches 'xy'" do
-        concat.matches?("xy")
-      end
-      asserts "#{concat.inspect} does not match 'random'" do
-        not concat.matches?("random")
-      end
-      chained = Concatenate.new(
-        Literal.new("x"),
-        Concatenate.new(Literal.new("y"), Literal.new("z")))
-      asserts "can be chained so that #{chained.inspect} matches 'xyz'" do
-        chained.matches?("xyz")
-      end
-    end
-
-    context "Option" do
-      option1 = Option.new(Literal.new("x"), Literal.new("y"))
-      asserts "#{option1.inspect} matches 'x'" do
-        option1.matches?("x")
+        exp.inspect == "/(x|xy)*/"
       end
 
-      option2 = Option.new(
-        Concatenate.new(
-          Literal.new("a"),
-          Literal.new("b")),
-        Literal.new("y"))
-      asserts "#{option2.inspect} matches 'ab'" do
-        option2.matches?("ab")
+      context "Empty" do
+        asserts "can be turned into an NFA" do
+          Empty.new.to_nfa_runner.kind_of? NFA::Runner
+        end
+        asserts "Empty's NFA will accept the empty string" do
+          Empty.new.matches?("")
+        end
       end
-      asserts "#{option2.inspect} matches 'y'" do
-        option2.matches?("y")
-      end
-      asserts "#{option2.inspect} does not match 'random'" do
-        not option2.matches?("random")
-      end
-    end
 
-    context "Repeat" do
-      repeat = Repeat.new(Literal.new("a"))
-      asserts "#{repeat.inspect} will match 'a'" do
-        repeat.matches?('a')
+      context "Literal" do
+        asserts "can be turned into an NFA" do
+          Literal.new("x").to_nfa_runner.kind_of? NFA::Runner
+        end
+        asserts "Literal's NFA will accept the character it was initialised with" do
+          Literal.new("x").matches?("x")
+        end
+        asserts "Literal's NFA won't accept other characters than the one it was initialised with" do
+          not Literal.new("x").matches?("y")
+        end
       end
-      asserts "#{repeat.inspect} will match 'aaaaaaaaa'" do
-        repeat.matches?('aaaaaaaaa')
+
+      context "Concatenate" do
+        concat = Concatenate.new(Literal.new("x"), Literal.new("y"))
+        asserts "#{concat.inspect} matches 'xy'" do
+          concat.matches?("xy")
+        end
+        asserts "#{concat.inspect} does not match 'random'" do
+          not concat.matches?("random")
+        end
+        chained = Concatenate.new(
+          Literal.new("x"),
+          Concatenate.new(Literal.new("y"), Literal.new("z")))
+        asserts "can be chained so that #{chained.inspect} matches 'xyz'" do
+          chained.matches?("xyz")
+        end
       end
-      asserts "#{repeat.inspect} will not match 'bb'" do
-        not repeat.matches?('bb')
+
+      context "Option" do
+        option1 = Option.new(Literal.new("x"), Literal.new("y"))
+        asserts "#{option1.inspect} matches 'x'" do
+          option1.matches?("x")
+        end
+
+        option2 = Option.new(
+          Concatenate.new(
+            Literal.new("a"),
+            Literal.new("b")),
+          Literal.new("y"))
+        asserts "#{option2.inspect} matches 'ab'" do
+          option2.matches?("ab")
+        end
+        asserts "#{option2.inspect} matches 'y'" do
+          option2.matches?("y")
+        end
+        asserts "#{option2.inspect} does not match 'random'" do
+          not option2.matches?("random")
+        end
+      end
+
+      context "Repeat" do
+        repeat = Repeat.new(Literal.new("a"))
+        asserts "#{repeat.inspect} will match 'a'" do
+          repeat.matches?('a')
+        end
+        asserts "#{repeat.inspect} will match 'aaaaaaaaa'" do
+          repeat.matches?('aaaaaaaaa')
+        end
+        asserts "#{repeat.inspect} will not match 'bb'" do
+          not repeat.matches?('bb')
+        end
+        asserts "#{repeat.inspect} will match ''" do
+          repeat.matches?('')
+        end
+      end
+
+      context "/a(|b))*/" do
+        pattern = Repeat.new(Concatenate.new(Literal.new("a"), Option.new(Empty.new, Literal.new("b"))))
+        asserts "Constructed pattern prints to expected representation" do
+          "/(a(|b))*/" == pattern.inspect
+        end
+        asserts "#{pattern.inspect} will match ''" do pattern.matches?('') end
+        asserts "#{pattern.inspect} will match 'a'" do pattern.matches?('a') end
+        asserts "#{pattern.inspect} will match 'ab'" do pattern.matches?('ab') end
+        asserts "#{pattern.inspect} will match 'aba'" do pattern.matches?('aba') end
+        asserts "#{pattern.inspect} will match 'abab'" do pattern.matches?('abab') end
+        asserts "#{pattern.inspect} will match 'abaab'" do pattern.matches?('abaab') end
+        asserts "#{pattern.inspect} will not match 'abba'" do not pattern.matches?('abba') end
+
       end
     end
 
   end
-
 
 end

@@ -31,7 +31,7 @@ class Add < Struct.new(:left, :right)
   include Inspectable
   include Reducible
   def to_s
-    "#{left} + #{right}"
+    "(#{left} + #{right})"
   end
 end
 
@@ -39,7 +39,7 @@ class Multiply < Struct.new(:left, :right)
   include Inspectable
   include Reducible
   def to_s
-    "#{left} * #{right}"
+    "(#{left} * #{right})"
   end
 end
 
