@@ -16,6 +16,24 @@ class NFASimulation < Struct.new(:nfa_runner)
     nfa_runner.rulebook.alphabet.map { |character|
       FA::Rule.new(state, character, next_state(state, character)) }
   end
+
+  def states_and_rules(states = Set[nfa_runner.nfa().current_states])
+    rules = states.flat_map {|state| rules_for(state)}
+    more_states = rules.map(&:follow).to_set
+
+    if more_states.subset?(states)
+      [states, rules]
+    else
+      states_and_rules(states+more_states)
+    end
+  end
+
+  def to_dfa()
+    start_state = nfa_runner.nfa().current_states
+    states, rules = states_and_rules
+    accept_states = states.select { |s| nfa_runner.nfa(s).accepting? }
+    DFA::DFA.new(start_state, accept_states, DFA::Rulebook.new(rules))
+  end
 end
 
 
@@ -35,6 +53,7 @@ if __FILE__ == $0
     asserts "will accept a runner on cosntruction" do
       NFASimulation.new(runner)
     end
+
     [
       [Set[1,2], 'a', Set[1,2]],
       [Set[1,2], 'b', Set[3,2]],
@@ -46,5 +65,35 @@ if __FILE__ == $0
         NFASimulation.new(runner).next_state(starting_metastate, input_char)
       }.equals(expected_metastate)
     end
+
+    asserts "can return the states of an NFA" do 
+      states, rules = NFASimulation.new(runner).states_and_rules()
+      states == Set[
+        Set[1,2],
+        Set[2,3],
+        Set[],
+        Set[1,2,3]
+      ]
+    end
+
+    asserts "can return the rules of an NFA" do
+      states, rules = NFASimulation.new(runner).states_and_rules()
+      rules == [
+        FA::Rule.new(Set[1,2], 'a', Set[1,2]),
+        FA::Rule.new(Set[1,2], 'b', Set[2,3]),
+        FA::Rule.new(Set[3,2], 'a', Set[]),
+        FA::Rule.new(Set[3,2], 'b', Set[1,2,3]),
+        FA::Rule.new(Set[], 'a', Set[]),
+        FA::Rule.new(Set[], 'b', Set[]),
+        FA::Rule.new(Set[1,2,3], 'a', Set[1,2]),
+        FA::Rule.new(Set[1,2,3], 'b', Set[1,2,3])
+      ]
+    end
+
+    asserts "can create a valid DFA" do
+      dfa = NFASimulation.new(runner).to_dfa()
+      not DFA::Runner.new(dfa).accepts?('aaa')
+    end
+
   end
 end
